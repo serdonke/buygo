@@ -1,0 +1,56 @@
+# GraphQL schema example
+#
+# https://gqlgen.com/getting-started/
+scalar DateTime
+
+type Deal {
+  id: ID!
+  title: String!
+  description: String!
+  vendorId: ID!
+  price: Float!
+  originalPrice: Float
+  discountPercentage: Float
+  location: GeoPoint!
+  expiresAt: DateTime
+  createdAt: DateTime!
+}
+
+type GeoPoint {
+  latitude: Float!
+  longitude: Float!
+}
+
+input BoundingBox {
+  minLatitude: Float!
+  maxLatitude: Float!
+  minLongitude: Float!
+  maxLongitude: Float!
+}
+
+input DealInput {
+  title: String!
+  description: String!
+  vendorId: ID!
+  price: Float!
+  originalPrice: Float
+  location: GeoPointInput!
+  expiresAt: DateTime
+}
+
+input GeoPointInput {
+  latitude: Float!
+  longitude: Float!
+}
+
+type Query {
+  dealsInViewport(boundingBox: BoundingBox!): [Deal!]!
+}
+
+type Mutation {
+  createDeal(input: DealInput!): Deal!
+}
+
+type Subscription {
+  dealCreatedInViewport(boundingBox: BoundingBox!): Deal!
+}
