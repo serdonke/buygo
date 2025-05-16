@@ -16,6 +16,7 @@ import (
 
 	"github.com/xjem/t38c"
 	"github.com/gorilla/websocket"
+	"github.com/rs/cors"
 )
 
 const defaultPort = "8080"
@@ -60,7 +61,8 @@ func main() {
 	})
 
 	http.Handle("/", playground.Handler("GraphQL playground", "/query"))
-	http.Handle("/query", srv)
+	handlerWithCors := cors.AllowAll().Handler(srv)
+	http.Handle("/query", handlerWithCors)
 
 	log.Printf("connect to http://localhost:%s/ for GraphQL playground", port)
 	log.Fatal(http.ListenAndServe(":"+port, nil))
