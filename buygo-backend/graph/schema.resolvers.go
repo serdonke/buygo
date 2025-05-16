@@ -14,7 +14,6 @@ import (
 )
 
 // CreateDeal is the resolver for the createDeal field.
-
 func (r *mutationResolver) CreateDeal(ctx context.Context, input model.DealInput) (*model.Deal, error) {
 	now := time.Now()
 
@@ -47,6 +46,18 @@ func (r *mutationResolver) CreateDeal(ctx context.Context, input model.DealInput
 		return nil, fmt.Errorf("tile38 insert failed: %w", err)
 	}
 
+	r.subsMu.RLock()
+	for _, sub := range r.Subs {
+		if inBoundingBox(deal.Location, sub.bb) {
+			select {
+			case sub.feed <- deal:
+			default:
+				// skip if channel is full
+			}
+		}
+	}
+	r.subsMu.RUnlock()
+
 	return deal, nil
 }
 
@@ -56,6 +67,13 @@ func calculateDiscount(price float64, original *float64) *float64 {
 	}
 	discount := (1 - (price / *original)) * 100
 	return &discount
+}
+
+func inBoundingBox(p *model.GeoPoint, bb model.BoundingBox) bool {
+	return p.Latitude >= bb.MinLatitude &&
+		p.Latitude <= bb.MaxLatitude &&
+		p.Longitude >= bb.MinLongitude &&
+		p.Longitude <= bb.MaxLongitude
 }
 
 // DealsInViewport is the resolver for the dealsInViewport field.
@@ -85,8 +103,26 @@ func (r *queryResolver) DealsInViewport(ctx context.Context, bb model.BoundingBo
 }
 
 // DealCreatedInViewport is the resolver for the dealCreatedInViewport field.
-func (r *subscriptionResolver) DealCreatedInViewport(ctx context.Context, boundingBox model.BoundingBox) (<-chan *model.Deal, error) {
-	panic(fmt.Errorf("not implemented: DealCreatedInViewport - dealCreatedInViewport"))
+func (r *subscriptionResolver) DealCreatedInViewport(ctx context.Context, bb model.BoundingBox) (<-chan *model.Deal, error) {
+	id := uuid.NewString()
+	feed := make(chan *model.Deal, 1)
+
+	r.subsMu.Lock()
+	r.Subs[id] = Subscription{
+		bb:   bb,
+		feed: feed,
+	}
+	r.subsMu.Unlock()
+
+	// Clean up when the client disconnects
+	go func() {
+		<-ctx.Done()
+		r.subsMu.Lock()
+		delete(r.Subs, id)
+		r.subsMu.Unlock()
+	}()
+
+	return feed, nil
 }
 
 // Mutation returns MutationResolver implementation.
