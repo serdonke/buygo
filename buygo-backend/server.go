@@ -12,6 +12,8 @@ import (
 	"github.com/99designs/gqlgen/graphql/handler/transport"
 	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/vektah/gqlparser/v2/ast"
+
+	"github.com/xjem/t38c"
 )
 
 const defaultPort = "8080"
@@ -21,8 +23,19 @@ func main() {
 	if port == "" {
 		port = defaultPort
 	}
+	
+	tile, err := t38c.New(t38c.Config{
+		Address: "localhost:9851",
+		Debug:   true,
+	})
+	if err != nil {
+		log.Fatalf("failed to connect to Tile38: %v", err)
+	}
 
-	srv := handler.New(graph.NewExecutableSchema(graph.Config{Resolvers: &graph.Resolver{}}))
+	srv := handler.New(graph.NewExecutableSchema(graph.Config{
+		Resolvers: &graph.Resolver{
+			Tile: tile,
+		}}))
 
 	srv.AddTransport(transport.Options{})
 	srv.AddTransport(transport.GET{})

@@ -14,26 +14,38 @@ import (
 )
 
 // CreateDeal is the resolver for the createDeal field.
+
 func (r *mutationResolver) CreateDeal(ctx context.Context, input model.DealInput) (*model.Deal, error) {
+	now := time.Now()
+
 	deal := &model.Deal{
-		ID:          uuid.NewString(),
-		Title:       input.Title,
-		Description: input.Description,
-		VendorID:    input.VendorID,
-		Price:       input.Price,
-		OriginalPrice: input.OriginalPrice,
+		ID:                 uuid.NewString(),
+		Title:              input.Title,
+		Description:        input.Description,
+		VendorID:           input.VendorID,
+		Price:              input.Price,
+		OriginalPrice:      input.OriginalPrice,
 		DiscountPercentage: calculateDiscount(input.Price, input.OriginalPrice),
 		Location: &model.GeoPoint{
 			Latitude:  input.Location.Latitude,
 			Longitude: input.Location.Longitude,
 		},
-		CreatedAt: time.Now(),
+		CreatedAt: now,
 		ExpiresAt: input.ExpiresAt,
 	}
 
 	r.mu.Lock()
 	r.Deals = append(r.Deals, deal)
 	r.mu.Unlock()
+
+	err := r.Tile.Keys.Set("deals", deal.ID).
+	Point(deal.Location.Latitude, deal.Location.Longitude).
+	Field("created_at", float64(deal.CreatedAt.Unix())).
+	Do(ctx)
+
+	if err != nil {
+		return nil, fmt.Errorf("tile38 insert failed: %w", err)
+	}
 
 	return deal, nil
 }

@@ -3,6 +3,8 @@ package graph
 import (
 	"buygo/graph/model"
 	"sync"
+
+	"github.com/xjem/t38c"
 )
 // This file will not be regenerated automatically.
 //
@@ -11,4 +13,6 @@ import (
 type Resolver struct{
 	Deals []*model.Deal
 	mu sync.RWMutex
+	
+	Tile *t38c.Client
 }

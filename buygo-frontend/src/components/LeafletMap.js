@@ -14,7 +14,7 @@ export default function LeafletMap() {
         attribution='&copy; <a href="https://osm.org/copyright">OpenStreetMap</a> contributors'
       />
       <Marker position={position}>
-        <Popup>Chennai Deal!</Popup>
+        <Popup>Chennai!</Popup>
       </Marker>
     </MapContainer>
   );
