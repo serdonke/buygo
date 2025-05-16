@@ -60,14 +60,24 @@ func calculateDiscount(price float64, original *float64) *float64 {
 
 // DealsInViewport is the resolver for the dealsInViewport field.
 func (r *queryResolver) DealsInViewport(ctx context.Context, bb model.BoundingBox) ([]*model.Deal, error) {
+	resp, err := r.Tile.Search.Within("deals").
+		Bounds(bb.MinLatitude, bb.MinLongitude, bb.MaxLatitude, bb.MaxLongitude).
+		Do(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("tile38 within query failed: %w", err)
+	}
+
+	idSet := make(map[string]struct{}, len(resp.Objects))
+	for _, obj := range resp.Objects {
+		idSet[obj.ID] = struct{}{}
+	}
+
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
 	var matches []*model.Deal
 	for _, d := range r.Deals {
-		lat := d.Location.Latitude
-		lon := d.Location.Longitude
-		if lat >= bb.MinLatitude && lat <= bb.MaxLatitude && lon >= bb.MinLongitude && lon <= bb.MaxLongitude {
+		if _, found := idSet[d.ID]; found {
 			matches = append(matches, d)
 		}
 	}
