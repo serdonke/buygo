@@ -17,9 +17,6 @@ type Subscription struct {
 }
 
 type Resolver struct{
-	Deals []*model.Deal
-	mu sync.RWMutex
-	
 	Tile *t38c.Client
 
 	subsMu sync.RWMutex

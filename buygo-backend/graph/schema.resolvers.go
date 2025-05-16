@@ -59,10 +59,6 @@ func (r *mutationResolver) CreateDeal(ctx context.Context, input model.DealInput
 		// continue anyway
 	}
 
-	r.mu.Lock()
-	r.Deals = append(r.Deals, deal)
-	r.mu.Unlock()
-
 	tileErr := r.Tile.Keys.Set("deals", deal.ID).
 	Point(deal.Location.Latitude, deal.Location.Longitude).
 	Field("created_at", float64(deal.CreatedAt.Unix())).
@@ -116,14 +112,19 @@ func (r *queryResolver) DealsInViewport(ctx context.Context, bb model.BoundingBo
 		idSet[obj.ID] = struct{}{}
 	}
 
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-
 	var matches []*model.Deal
-	for _, d := range r.Deals {
-		if _, found := idSet[d.ID]; found {
-			matches = append(matches, d)
+	for id := range idSet {
+		val, err := r.Redis.Get(ctx, "deal:"+id).Bytes()
+		if err != nil {
+			fmt.Printf("failed to get deal %s from Redis: %v\n", id, err)
+			continue
 		}
+		var deal model.Deal
+		if err := json.Unmarshal(val, &deal); err != nil {
+			fmt.Printf("failed to decode deal %s: %v\n", id, err)
+			continue
+		}
+		matches = append(matches, &deal)
 	}
 	return matches, nil
 }
