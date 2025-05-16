@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"time"
+	"encoding/json"
 
 	"github.com/google/uuid"
 )
@@ -33,16 +34,41 @@ func (r *mutationResolver) CreateDeal(ctx context.Context, input model.DealInput
 		ExpiresAt: input.ExpiresAt,
 	}
 
+	// Serialize to JSON
+	dealBytes, err := json.Marshal(deal)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal deal to JSON: %w", err)
+	}
+
+
+	var ttl time.Duration
+	if deal.ExpiresAt != nil {
+		ttl = time.Until(*deal.ExpiresAt)
+		if ttl <= 0 {
+			ttl = time.Hour // fallback TTL
+		}
+	} else {
+		ttl = time.Hour
+	}
+
+
+	// Store in Redis
+	redisErr := r.Redis.Set(ctx, "deal:"+deal.ID, dealBytes, ttl).Err()
+	if redisErr != nil {
+		fmt.Errorf("warning: failed to write deal to Redis: %v", err)
+		// continue anyway
+	}
+
 	r.mu.Lock()
 	r.Deals = append(r.Deals, deal)
 	r.mu.Unlock()
 
-	err := r.Tile.Keys.Set("deals", deal.ID).
+	tileErr := r.Tile.Keys.Set("deals", deal.ID).
 	Point(deal.Location.Latitude, deal.Location.Longitude).
 	Field("created_at", float64(deal.CreatedAt.Unix())).
 	Do(ctx)
 
-	if err != nil {
+	if tileErr != nil {
 		return nil, fmt.Errorf("tile38 insert failed: %w", err)
 	}
 

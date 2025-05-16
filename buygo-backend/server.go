@@ -6,7 +6,11 @@ import (
 	"net/http"
 	"os"
 	"time"
+	"context"
+	"encoding/json"
 
+	"buygo/graph/model"
+	
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/handler/extension"
 	"github.com/99designs/gqlgen/graphql/handler/lru"
@@ -17,6 +21,7 @@ import (
 	"github.com/xjem/t38c"
 	"github.com/gorilla/websocket"
 	"github.com/rs/cors"
+	"github.com/redis/go-redis/v9"
 )
 
 const defaultPort = "8080"
@@ -35,10 +40,23 @@ func main() {
 		log.Fatalf("failed to connect to Tile38: %v", err)
 	}
 
+	redisClient := redis.NewClient(&redis.Options{
+		Addr: "localhost:6379",
+	})
+	if err := redisClient.Ping(context.Background()).Err(); err != nil {
+		log.Printf("warning: Redis not available: %v", err)
+	}
+
+	ctx := context.Background()
+	if err := hydrateTile38FromRedis(ctx, redisClient, tile); err != nil {
+		log.Printf("hydration failed: %v", err)
+	}
+
 	srv := handler.New(graph.NewExecutableSchema(graph.Config{
 		Resolvers: &graph.Resolver{
 			Tile: tile,
 			Subs: make(map[string]graph.Subscription),
+			Redis: redisClient,
 		}}))
 
 	srv.AddTransport(transport.Options{})
@@ -66,4 +84,36 @@ func main() {
 
 	log.Printf("connect to http://localhost:%s/ for GraphQL playground", port)
 	log.Fatal(http.ListenAndServe(":"+port, nil))
+}
+
+func hydrateTile38FromRedis(ctx context.Context, redisClient *redis.Client, tile *t38c.Client) error {
+	iter := redisClient.Scan(ctx, 0, "deal:*", 0).Iterator()
+	for iter.Next(ctx) {
+		key := iter.Val()
+
+		data, err := redisClient.Get(ctx, key).Bytes()
+		if err != nil {
+			log.Printf("failed to read %s from Redis: %v", key, err)
+			continue
+		}
+
+		var deal model.Deal
+		if err := json.Unmarshal(data, &deal); err != nil {
+			log.Printf("failed to unmarshal %s: %v", key, err)
+			continue
+		}
+
+		err = tile.Keys.Set("deals", deal.ID).
+			Point(deal.Location.Latitude, deal.Location.Longitude).
+			Field("created_at", float64(deal.CreatedAt.Unix())).
+			Do(ctx)
+		if err != nil {
+			log.Printf("failed to rehydrate deal %s into Tile38: %v", deal.ID, err)
+		}
+	}
+	if err := iter.Err(); err != nil {
+		return err
+	}
+	log.Println("✅ Tile38 hydration complete.")
+	return nil
 }

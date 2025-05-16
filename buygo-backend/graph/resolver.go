@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/xjem/t38c"
+	"github.com/redis/go-redis/v9"
 )
 // This file will not be regenerated automatically.
 //
@@ -23,4 +24,6 @@ type Resolver struct{
 
 	subsMu sync.RWMutex
 	Subs map[string]Subscription
+
+	Redis *redis.Client
 }
