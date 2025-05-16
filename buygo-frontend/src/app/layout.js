@@ -1,6 +1,7 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import 'leaflet/dist/leaflet.css'
+import ApolloWrapper from '../components/ApolloWrapper';
 
 export const metadata = {
   title: 'BuyGo',
@@ -22,7 +23,9 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
-        {children}
+        <ApolloWrapper>
+          {children}
+        </ApolloWrapper>
       </body>
     </html>
   );

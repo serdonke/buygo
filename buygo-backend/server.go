@@ -15,6 +15,7 @@ import (
 	"github.com/vektah/gqlparser/v2/ast"
 
 	"github.com/xjem/t38c"
+	"github.com/gorilla/websocket"
 )
 
 const defaultPort = "8080"
@@ -44,6 +45,11 @@ func main() {
 	srv.AddTransport(transport.POST{})
 	srv.AddTransport(transport.Websocket{
 		KeepAlivePingInterval: 10 * time.Second,
+		Upgrader: websocket.Upgrader{
+			CheckOrigin: func(r *http.Request) bool {
+				return true
+			},
+		},
 	})
 
 	srv.SetQueryCache(lru.New[*ast.QueryDocument](1000))
