@@ -22,11 +22,31 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/rs/cors"
 	"github.com/redis/go-redis/v9"
+
+	// Profiling, metrics and stuff
+	_ "net/http/pprof"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 const defaultPort = "8080"
 
 func main() {
+	go func() {
+		mux := http.NewServeMux()
+		mux.HandleFunc("/debug/pprof/", http.DefaultServeMux.ServeHTTP)
+
+		log.Println("pprof listening on :6060")
+		if err := http.ListenAndServe(":6060", mux); err != nil {
+			log.Printf("pprof server error: %v", err)
+		}
+	}()
+
+	go func() {
+		log.Println("Prometheus metrics listening on :2112")
+		http.Handle("/metrics", promhttp.Handler())
+		log.Fatal(http.ListenAndServe(":2112", nil))
+	}()
+
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = defaultPort
@@ -113,6 +133,6 @@ func hydrateTile38FromRedis(ctx context.Context, redisClient *redis.Client, tile
 	if err := iter.Err(); err != nil {
 		return err
 	}
-	log.Println("✅ Tile38 hydration complete.")
+	log.Println("Tile38 hydration complete.")
 	return nil
 }

@@ -13,7 +13,36 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/xjem/t38c"
+
+	"github.com/prometheus/client_golang/prometheus"
 )
+
+var (
+	dealsCreated = prometheus.NewCounter(prometheus.CounterOpts{
+		Name: "buygo_deals_created_total",
+		Help: "Total number of deals created",
+	})
+
+	tile38Errors = prometheus.NewCounter(prometheus.CounterOpts{
+		Name: "buygo_tile38_errors_total",
+		Help: "Tile38 insert/search failures",
+	})
+
+	viewportSubs = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "buygo_active_viewport_subscriptions",
+		Help: "Number of active viewport subscriptions",
+	})
+
+	tile38Duration = prometheus.NewHistogram(prometheus.HistogramOpts{
+		Name: "buygo_tile38_latency_seconds",
+		Help: "Latency of Tile38 operations",
+		Buckets: prometheus.DefBuckets,
+	})
+)
+
+func init() {
+	prometheus.MustRegister(dealsCreated, tile38Errors, viewportSubs, tile38Duration)
+}
 
 // CreateDeal is the resolver for the createDeal field.
 func (r *mutationResolver) CreateDeal(ctx context.Context, input model.DealInput) (*model.Deal, error) {
@@ -60,12 +89,15 @@ func (r *mutationResolver) CreateDeal(ctx context.Context, input model.DealInput
 		// continue anyway
 	}
 
+	dealsCreated.Inc()
+
 	tileErr := r.Tile.Keys.Set("deals", deal.ID).
 	Point(deal.Location.Latitude, deal.Location.Longitude).
 	Field("created_at", float64(deal.CreatedAt.Unix())).
 	Do(ctx)
 
 	if tileErr != nil {
+		tile38Errors.Inc()
 		return nil, fmt.Errorf("tile38 insert failed: %w", err)
 	}
 
@@ -82,10 +114,14 @@ func calculateDiscount(price float64, original *float64) *float64 {
 
 // DealsInViewport is the resolver for the dealsInViewport field.
 func (r *queryResolver) DealsInViewport(ctx context.Context, bb model.BoundingBox) ([]*model.Deal, error) {
+	start := time.Now()
 	resp, err := r.Tile.Search.Within("deals").
 		Bounds(bb.MinLatitude, bb.MinLongitude, bb.MaxLatitude, bb.MaxLongitude).
 		Do(ctx)
+		
+		tile38Duration.Observe(time.Since(start).Seconds())
 	if err != nil {
+		tile38Errors.Inc()
 		return nil, fmt.Errorf("tile38 within query failed: %w", err)
 	}
 
@@ -117,6 +153,7 @@ func (r *subscriptionResolver) DealCreatedInViewport(ctx context.Context, bb mod
 
 	geoCtx, cancel := context.WithCancel(context.Background())
 
+	viewportSubs.Inc()
 	//NOTE:(donke) Can we go even FASTAR if we use raw RESP?
 	go func() {
 		err := r.Tile.Geofence.Within("deals").
@@ -155,6 +192,7 @@ func (r *subscriptionResolver) DealCreatedInViewport(ctx context.Context, bb mod
 	// YEEEEEEEEEEEEEET
 	go func() {
 		<-ctx.Done()
+		viewportSubs.Dec()
 		cancel()
 		close(feed)
 	}()

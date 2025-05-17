@@ -18,6 +18,8 @@ services:
     build: ./buygo-backend
     ports:
       - "8080:8080"
+      - "6060:6060"
+      - "2112:2112"
     depends_on:
       - redis
       - tile38
@@ -31,6 +33,24 @@ services:
       - "3000:3000"
     depends_on:
       - backend
+
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - default
+
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    ports:
+      - "3001:3000"
+    networks:
+      - default
 
 volumes:
   redis-data:
