@@ -33,7 +33,7 @@ func main() {
 	}
 	
 	tile, err := t38c.New(t38c.Config{
-		Address: "localhost:9851",
+		Address: "tile38:9851",
 		Debug:   true,
 	})
 	if err != nil {
@@ -41,7 +41,7 @@ func main() {
 	}
 
 	redisClient := redis.NewClient(&redis.Options{
-		Addr: "localhost:6379",
+		Addr: "redis:6379",
 	})
 	if err := redisClient.Ping(context.Background()).Err(); err != nil {
 		log.Printf("warning: Redis not available: %v", err)
