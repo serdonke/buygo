@@ -89,7 +89,6 @@ func (r *mutationResolver) CreateDeal(ctx context.Context, input model.DealInput
 		// continue anyway
 	}
 
-	dealsCreated.Inc()
 
 	tileErr := r.Tile.Keys.Set("deals", deal.ID).
 	Point(deal.Location.Latitude, deal.Location.Longitude).
@@ -100,6 +99,9 @@ func (r *mutationResolver) CreateDeal(ctx context.Context, input model.DealInput
 		tile38Errors.Inc()
 		return nil, fmt.Errorf("tile38 insert failed: %w", err)
 	}
+
+	//NOTE:(donke) Is this useless? grafana shows erroneous numbers
+	dealsCreated.Inc()
 
 	return deal, nil
 }
