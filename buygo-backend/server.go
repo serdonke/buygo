@@ -55,7 +55,6 @@ func main() {
 	srv := handler.New(graph.NewExecutableSchema(graph.Config{
 		Resolvers: &graph.Resolver{
 			Tile: tile,
-			Subs: make(map[string]graph.Subscription),
 			Redis: redisClient,
 		}}))
 

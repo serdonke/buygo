@@ -4,15 +4,25 @@
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 
-import { useRef, useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { useSubscription, useLazyQuery } from '@apollo/client';
 import { DEALS_IN_VIEWPORT_QUERY } from '../graphql/dealsInViewport';
 import { DEAL_CREATED_SUBSCRIPTION } from '../graphql/dealCreatedInViewport';
 
+function isSameBoundingBox(bb1, bb2) {
+  if (!bb1 || !bb2) return false;
+  return (
+    bb1.minLatitude === bb2.minLatitude &&
+    bb1.maxLatitude === bb2.maxLatitude &&
+    bb1.minLongitude === bb2.minLongitude &&
+    bb1.maxLongitude === bb2.maxLongitude
+  );
+}
+
 export default function LeafletMap() {
     const position = [13.0827, 80.2707]; // Chennai
     const [deals, setDeals] = useState([]);
-    const queryBoundsOnce = useRef(true);
+    const [boundingBox, setBoundingBox] = useState(null);
 
     const [loadDealsInViewport] = useLazyQuery(DEALS_IN_VIEWPORT_QUERY, {
         onCompleted: (data) => {
@@ -21,75 +31,48 @@ export default function LeafletMap() {
         },
     });
 
-    const { data } = useSubscription(DEAL_CREATED_SUBSCRIPTION, {
-        variables: {
-            boundingBox: {
-                minLatitude: 0,
-                maxLatitude: 90,
-                minLongitude: -180,
-                maxLongitude: 180,
-            },
+    useSubscription(DEAL_CREATED_SUBSCRIPTION, {
+        variables: { boundingBox },
+        skip: !boundingBox,
+        onData: ({ data }) => {
+            const deal = data?.data?.dealCreatedInViewport;
+            if (deal) {
+                console.log("💥 Tile38 event:", deal);
+                setDeals(prev => [...prev, deal]);
+            }
         },
     });
 
-    useEffect(() => {
-        if (data?.dealCreatedInViewport) {
-            console.log("💥 New deal received:", data.dealCreatedInViewport);
-            setDeals((prev) => [...prev, data.dealCreatedInViewport]);
-        }
-    }, [data]);
-
-    const handleLoadDeals = useCallback((bounds) => {
-        // useLazyQuery is stable internally
-        loadDealsInViewport({
-            variables: {
-                boundingBox: {
-                    minLatitude: bounds.getSouth(),
-                    maxLatitude: bounds.getNorth(),
-                    minLongitude: bounds.getWest(),
-                    maxLongitude: bounds.getEast(),
-                },
-            },
-        });
-    }, []);
-
-    function ViewportWatcher({ onReady }) {
+    function ViewportWatcher() {
         const map = useMap();
 
         useEffect(() => {
-            if (!queryBoundsOnce.current) return;
-
             const bounds = map.getBounds();
-
-            setTimeout(() => {
-                loadDealsInViewport({
-                    variables: {
-                        boundingBox: {
-                            minLatitude: bounds.getSouth(),
-                            maxLatitude: bounds.getNorth(),
-                            minLongitude: bounds.getWest(),
-                            maxLongitude: bounds.getEast(),
-                        },
-                    },
-                });
-            }, 0);
-
-            queryBoundsOnce.current = false;
+            const bb = {
+                minLatitude: bounds.getSouth(),
+                maxLatitude: bounds.getNorth(),
+                minLongitude: bounds.getWest(),
+                maxLongitude: bounds.getEast(),
+            };
+            if (!isSameBoundingBox(bb, boundingBox)) {
+                setBoundingBox(bb);
+                loadDealsInViewport({ variables: { boundingBox: bb } });
+            }
         }, []);
 
         useMapEvents({
             moveend: () => {
                 const bounds = map.getBounds();
-                loadDealsInViewport({
-                    variables: {
-                        boundingBox: {
-                            minLatitude: bounds.getSouth(),
-                            maxLatitude: bounds.getNorth(),
-                            minLongitude: bounds.getWest(),
-                            maxLongitude: bounds.getEast(),
-                        },
-                    },
-                });
+                const bb = {
+                    minLatitude: bounds.getSouth(),
+                    maxLatitude: bounds.getNorth(),
+                    minLongitude: bounds.getWest(),
+                    maxLongitude: bounds.getEast(),
+                };
+                if (!isSameBoundingBox(bb, boundingBox)) {
+                    setBoundingBox(bb);
+                    loadDealsInViewport({ variables: { boundingBox: bb } });
+                }
             },
         });
 
@@ -107,7 +90,7 @@ export default function LeafletMap() {
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 attribution='&copy; <a href="https://osm.org/copyright">OpenStreetMap</a> contributors'
             />
-            <ViewportWatcher onReady={handleLoadDeals} />
+            <ViewportWatcher />
             {deals.map((deal) => (
                 <Marker
                     key={deal.id}

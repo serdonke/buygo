@@ -7,6 +7,9 @@ tool github.com/99designs/gqlgen
 require (
 	github.com/99designs/gqlgen v0.17.73
 	github.com/google/uuid v1.6.0
+	github.com/gorilla/websocket v1.5.0
+	github.com/redis/go-redis/v9 v9.8.0
+	github.com/rs/cors v1.11.1
 	github.com/vektah/gqlparser/v2 v2.5.26
 	github.com/xjem/t38c v0.11.0
 )
@@ -17,12 +20,9 @@ require (
 	github.com/cpuguy83/go-md2man/v2 v2.0.5 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/go-viper/mapstructure/v2 v2.2.1 // indirect
-	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/mediocregopher/radix/v4 v4.1.1 // indirect
 	github.com/paulmach/go.geojson v1.4.0 // indirect
-	github.com/redis/go-redis/v9 v9.8.0 // indirect
-	github.com/rs/cors v1.11.1 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/sosodev/duration v1.3.1 // indirect
 	github.com/tidwall/gjson v1.14.3 // indirect
