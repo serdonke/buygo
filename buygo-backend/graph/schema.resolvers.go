@@ -114,20 +114,33 @@ func calculateDiscount(price float64, original *float64) *float64 {
 
 // DealsInViewport is the resolver for the dealsInViewport field.
 func (r *queryResolver) DealsInViewport(ctx context.Context, bb model.BoundingBox) ([]*model.Deal, error) {
-	start := time.Now()
-	resp, err := r.Tile.Search.Within("deals").
-		Bounds(bb.MinLatitude, bb.MinLongitude, bb.MaxLatitude, bb.MaxLongitude).
-		Do(ctx)
-		
-		tile38Duration.Observe(time.Since(start).Seconds())
-	if err != nil {
-		tile38Errors.Inc()
-		return nil, fmt.Errorf("tile38 within query failed: %w", err)
-	}
+	cursor := 0
+	idSet := make(map[string]struct{})
 
-	idSet := make(map[string]struct{}, len(resp.Objects))
-	for _, obj := range resp.Objects {
-		idSet[obj.ID] = struct{}{}
+	start := time.Now()
+
+	for {
+		resp, err := r.Tile.Search.Within("deals").
+			Bounds(bb.MinLatitude, bb.MinLongitude, bb.MaxLatitude, bb.MaxLongitude).
+			Cursor(cursor).
+			Limit(500). // fetch in chunks of 500
+			Do(ctx)
+
+		tile38Duration.Observe(time.Since(start).Seconds())
+
+		if err != nil {
+			tile38Errors.Inc()
+			return nil, fmt.Errorf("tile38 within query failed: %w", err)
+		}
+
+		for _, obj := range resp.Objects {
+			idSet[obj.ID] = struct{}{}
+		}
+
+		if resp.Cursor == 0 {
+			break
+		}
+		cursor = resp.Cursor
 	}
 
 	var matches []*model.Deal
