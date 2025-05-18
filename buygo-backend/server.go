@@ -106,6 +106,12 @@ func main() {
 }
 
 func hydrateTile38FromRedis(ctx context.Context, redisClient *redis.Client, tile *t38c.Client) error {
+	//HACK:(donke) Flush everything bcoz in redis we trust!!!
+	//TODO: Maybe remove this...
+	//if err := tile.Server.FlushDB().Do(ctx); err != nil {
+	//	return log.Printf("failed to flush Tile38: %w", err)
+	//}
+
 	iter := redisClient.Scan(ctx, 0, "deal:*", 0).Iterator()
 	for iter.Next(ctx) {
 		key := iter.Val()

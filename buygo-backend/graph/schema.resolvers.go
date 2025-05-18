@@ -81,14 +81,11 @@ func (r *mutationResolver) CreateDeal(ctx context.Context, input model.DealInput
 		ttl = time.Hour
 	}
 
-
-	// Store in Redis
 	redisErr := r.Redis.Set(ctx, "deal:"+deal.ID, dealBytes, ttl).Err()
 	if redisErr != nil {
 		fmt.Errorf("warning: failed to write deal to Redis: %v", err)
 		// continue anyway
 	}
-
 
 	tileErr := r.Tile.Keys.Set("deals", deal.ID).
 	Point(deal.Location.Latitude, deal.Location.Longitude).
@@ -98,6 +95,12 @@ func (r *mutationResolver) CreateDeal(ctx context.Context, input model.DealInput
 	if tileErr != nil {
 		tile38Errors.Inc()
 		return nil, fmt.Errorf("tile38 insert failed: %w", err)
+	}
+
+	expireErr := r.Tile.Keys.Expire(ctx, "deals", deal.ID, int(ttl.Seconds()))
+	if expireErr != nil {
+		fmt.Printf("Tile38 EXPIRE failed for %s: %v\n", deal.ID, expireErr)
+		//TODO: count with a Prometheus metric
 	}
 
 	//NOTE:(donke) Is this useless? grafana shows erroneous numbers
