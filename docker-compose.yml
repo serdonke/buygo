@@ -52,5 +52,13 @@ services:
     networks:
       - default
 
+  presentation:
+    build:
+      context: ./slides
+    container_name: buygo-presentation
+    ports:
+      - "8089:80"
+    restart: unless-stopped
+
 volumes:
   redis-data:
