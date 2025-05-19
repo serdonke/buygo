@@ -1,4 +1,8 @@
-# Problem Statement
+# Run
+- Install docker and docker-compose
+```sh
+docker compose up --build
+```
 ## Problem Overview
 
 You are to design and implement a microservice that powers the “live deals” feature of a location‑based marketplace. 
@@ -49,8 +53,7 @@ Users can open a map and see special deals offered by vendors in their current a
 - [x] Latency for both initial queries and updates should remain low (<100 ms).
 - [x] Range Query Endpoint: Accepts geographic rectangle parameters and returns matching deals.
 - [x] Subscription Endpoint: Clients open a persistent connection to receive real‑time notifications for new deals in their area.
-- [ ] Insert Endpoint: Vendors can post new deals with geo‑coordinates; these are indexed and propagated to subscribers as needed.
-  - Might do later, is trivial
+- [x] Insert Endpoint: Vendors can post new deals with geo‑coordinates; these are indexed and propagated to subscribers as needed.
 - [x] Efficient Spatial Indexing: The service must index deal locations in a way that supports fast multi‑dimensional range queries, grouping nearby items into bounding rectangles to prune searches efficiently.
   - This is supported by [Tile38](https://tile38.com/)
 - [x] Push‑Based Client Updates: Implement a long‑lived connection protocol that lets the server push new deal events to subscribed clients as soon as they occur, avoiding client polling.
@@ -74,5 +77,8 @@ Users can open a map and see special deals offered by vendors in their current a
 - [x] GraphQL subscriptions backed by Tile38 geofences, not Go channels
 
 ## Planned features
- - [ ] Stress testing endpoints and/or dashboard buttons for bulk deal insertion and clearing (next step)
+ - [ ] Migrate to a real db for storing deal metadata
+ - [ ] Add vendor auth and deal creation rate limiting per vendor
+ - [ ] Some UX with pagination and list view for users and vendor friendly dashboard will prolly be nice asw
+ - [ ] Stress testing endpoints and/or dashboard buttons for bulk deal insertion and clearing (graphql playground ftw till then)
  - [ ] TTL-aware deal expiry syncs

@@ -31,8 +31,7 @@ Prateek Shukla
   - Each client subscribes to a geofenced bounding box  
   - Real-time updates are pushed to clients via Tile38 geofence events  
 
-- ❌ Enable vendors to insert deals with TTL  
-  - Not implemented yet — intended as a form + pin drop on vendor-only map view
+- ✅ Enable vendors to insert deals with TTL
 ---
 
 ## Extras
@@ -57,17 +56,12 @@ Prateek Shukla
 - `t38c` also lacked `FlushAll` and raw `Do(...)` interface
   - Had to dig into client library source code to find real method names (e.g. `Flush = FLUSHDB`)
 ---
-## Production Roadmap
-- Replace `Redis` with a proper metadata store (e.g. PostgreSQL)  
-- Add authentication and vendor identity  
-  - Prevent anonymous deal injection  
-- Enable horizontal scaling with pub/sub  
-  - WebSocket connections are stateful  
-  - Use `Redis` PubSub or NATS to broadcast deal inserts  
-  - Allows fanout across multiple backend instances
-- Optional: Real-time expiry notifications  
-  - Use `Redis` keyspace notifications or scheduled expirations  
-  - Push "dealExpired" events to clients (future improvement)
+## Planned Features
+- Migrate to a real database (e.g. PostgreSQL) for storing deal metadata
+- Add vendor authentication and rate limiting per vendor
+- Build a user-friendly list view and vendor dashboard for better UX
+- Stress testing endpoints and/or dashboard buttons for bulk deal insertion and clearing (GraphQL Playground for now)
+- TTL-aware deal expiry sync between Redis and frontend
 ---
 ## Summary
 
