@@ -9,14 +9,16 @@ import { useSubscription, useLazyQuery } from '@apollo/client';
 import { DEALS_IN_VIEWPORT_QUERY } from '../graphql/dealsInViewport';
 import { DEAL_CREATED_SUBSCRIPTION } from '../graphql/dealCreatedInViewport';
 
+import RedirectControl from './RedirectControl';
+
 function isSameBoundingBox(bb1, bb2) {
-  if (!bb1 || !bb2) return false;
-  return (
-    bb1.minLatitude === bb2.minLatitude &&
-    bb1.maxLatitude === bb2.maxLatitude &&
-    bb1.minLongitude === bb2.minLongitude &&
-    bb1.maxLongitude === bb2.maxLongitude
-  );
+    if (!bb1 || !bb2) return false;
+    return (
+        bb1.minLatitude === bb2.minLatitude &&
+        bb1.maxLatitude === bb2.maxLatitude &&
+        bb1.minLongitude === bb2.minLongitude &&
+        bb1.maxLongitude === bb2.maxLongitude
+    );
 }
 
 export default function LeafletMap() {
@@ -81,24 +83,25 @@ export default function LeafletMap() {
 
     return (
         <MapContainer
-            center={position}
-            zoom={13}
-            style={{ height: '100vh', width: '100%' }}
-            preferCanvas={true}
+        center={position}
+        zoom={13}
+        style={{ height: '100vh', width: '100%' }}
+        preferCanvas={true}
         >
-            <TileLayer
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                attribution='&copy; <a href="https://osm.org/copyright">OpenStreetMap</a> contributors'
-            />
-            <ViewportWatcher />
-            {deals.map((deal) => (
-                <Marker
-                    key={deal.id}
-                    position={[deal.location.latitude, deal.location.longitude]}
-                >
-                    <Popup>{deal.title}</Popup>
-                </Marker>
-            ))}
+        <TileLayer
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        attribution='&copy; <a href="https://osm.org/copyright">OpenStreetMap</a> contributors'
+        />
+        <RedirectControl label="🛍️" title="Go to vendor dashboard" to="/vendor" />
+        <ViewportWatcher />
+        {deals.map((deal) => (
+            <Marker
+            key={deal.id}
+            position={[deal.location.latitude, deal.location.longitude]}
+            >
+            <Popup>{deal.title}</Popup>
+            </Marker>
+        ))}
         </MapContainer>
     );
 }
