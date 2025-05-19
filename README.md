@@ -3,6 +3,8 @@
 ```sh
 docker compose up --build
 ```
+- Some scripts to stress the backend at `./testprof`, change URLs if working locally
+
 ## Problem Overview
 
 You are to design and implement a microservice that powers the “live deals” feature of a location‑based marketplace. 
