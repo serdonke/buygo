@@ -143,7 +143,6 @@ export default function VendorMap() {
         <MapContainer
         center={[20, 0]}
         zoom={2}
-        scrollWheelZoom={false}
         style={{ height: '100%', width: '100%' }}
       >
         <TileLayer
